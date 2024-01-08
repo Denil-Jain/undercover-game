@@ -109,7 +109,7 @@ def message(data):
     name = session.get("name")
     if room not in rooms:
         return
-    if len(data['data'])>25:
+    if len(data['data'])>35:
         data['data'] = "Message Error (Opps: Too Long)"
     content = {
         "name": name,
@@ -122,6 +122,13 @@ def message(data):
 @socketio.on("startGame")
 def startGame(data):
     room = session.get("room")
+    if len(rooms[room]["members"])<4:
+        content = {
+            "name": "Game",
+            "message": "We need four players before we can begin the game."
+        }
+        send(content, to=room)
+        return
     rooms[room]["gameStarted"] = True
     if data["data"] !="":
         setUndercover = int(data["data"])
