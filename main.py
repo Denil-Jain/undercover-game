@@ -6,6 +6,7 @@ from string import ascii_uppercase
 import os
 import sys
 from flask import Flask, session, render_template
+import statistics
 
 # from tests and from regular running of the app
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -179,50 +180,37 @@ def userVote(data):
         "message": name + " Voted for "+data
     }
     send(content, to=room)
-    all_voted = not any(value == False for value in rooms.get(room, {}).get("inGameUsers", {}).values())
-    if all_voted:
-        votes_count = {}
-        for voter, voted_for in rooms[room]["inGameUsers"].items():
-            if voted_for in votes_count:
-                votes_count[voted_for] += 1
-            else:
-                votes_count[voted_for] = 1
+    majority_vote = statistics.mode(rooms[room]["inGameUsers"].values()) 
+    if majority_vote:
         
-        total_users = len(rooms[room]["inGameUsers"])
-        majority_vote = total_users // 2 + 1  # Majority requires more than half of the votes
-        
-        # Find if any user has a majority of votes
-        for user, votes in votes_count.items():
-            if votes >= majority_vote:
-                content = {
-                    "name": "Eliminated",
-                    "message": user
-                }
-                socketio.emit("eliminate",{"name":user},room=room)
-                send(content,to=room)
-                content = {
-                    "name": user,
-                    "message": "was "+rooms[room]["roles"][user]
-                }
-                send(content,to=room)
-                if rooms[room]["roles"][user] == "white":
-                    content = {
-                    "name": "Game",
-                    "message": "wait for white to guess the word"
-                    }
-                    send(content,to=room)
-                    socketio.emit("guessWord",{"white":user},room=room)
-                    break
-                del rooms[room]["inGameUsers"][user]
-                rooms[room]["inGameUsers"] = {user: False for user in rooms[room]["inGameUsers"].keys()}
-                inGameUsers = list(rooms[room]["inGameUsers"].keys())
-                # print("before",inGameUsers)
-                while rooms[room]["roles"][inGameUsers[0]] == "white":
-                    random.shuffle(inGameUsers)
-                # print("after",inGameUsers)
-                # print(inGameUsers)
-                socketio.emit("updateVotingTable",{"inGameUsers":inGameUsers},room=room)
-                break
+        content = {
+            "name": "Eliminated",
+            "message": majority_vote
+        }
+        socketio.emit("eliminate",{"name":majority_vote},room=room)
+        send(content,to=room)
+        content = {
+            "name": majority_vote,
+            "message": "was "+rooms[room]["roles"][majority_vote]
+        }
+        send(content,to=room)
+        if rooms[room]["roles"][majority_vote] == "white":
+            content = {
+            "name": "Game",
+            "message": "wait for white to guess the word"
+            }
+            send(content,to=room)
+            socketio.emit("guessWord",{"white":majority_vote},room=room)
+        else:
+            del rooms[room]["inGameUsers"][majority_vote]
+            rooms[room]["inGameUsers"] = {user: False for user in rooms[room]["inGameUsers"].keys()}
+            inGameUsers = list(rooms[room]["inGameUsers"].keys())
+            # print("before",inGameUsers)
+            while rooms[room]["roles"][inGameUsers[0]] == "white":
+                random.shuffle(inGameUsers)
+            # print("after",inGameUsers)
+            # print(inGameUsers)
+            socketio.emit("updateVotingTable",{"inGameUsers":inGameUsers},room=room)
         
         rooms[room]["inGameUsers"] = {user: False for user in (rooms[room]["inGameUsers"]).keys()}
 
