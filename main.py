@@ -13,6 +13,7 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 # print(CURR_DIR)
 sys.path.append(CURR_DIR)
 app = Flask(__name__)
+application = app
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 socketio = SocketIO(app)
 
